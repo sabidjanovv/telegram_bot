@@ -88,9 +88,11 @@ import { PrismaService } from '../prisma.service';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
 @Controller('sheets')
 export class SheetsController {
@@ -117,6 +119,28 @@ export class SheetsController {
       return ['true', '1', 'yes', 'ha'].includes(s);
     };
 
+    const parseDateTz = (input: string) => {
+      if (!input) return null;
+
+      // DD.MM.YYYY
+      if (/^\d{2}\.\d{2}\.\d{4}$/.test(input)) {
+        return dayjs
+          .tz(input + ' 00:00:01', 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
+          .toDate();
+      }
+
+      // DD.MM.YYYY HH:mm:ss
+      if (/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}$/.test(input)) {
+        return dayjs.tz(input, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent').toDate();
+      }
+
+      // YYYY-MM-DD HH:mm:ss yoki ISO string
+      const d = dayjs(input);
+      if (d.isValid()) return d.toDate();
+
+      return null;
+    };
+
     for (const row of rows) {
       const [
         no,
@@ -133,49 +157,14 @@ export class SheetsController {
 
       if (!id || !vaqt) {
         console.warn('⏩ Skipping row due to missing id or vaqt:', row);
-        continue; // vaqt bo‘lmasa o‘tkazamiz
-      }
-
-      // let parsedDate: Date;
-      // try {
-      //   if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
-      //     if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
-      //       parsedDate = dayjs
-      //         .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
-      //         .toDate();
-      //     } else {
-      //       parsedDate = dayjs.tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent').toDate();
-      //     }
-      //   } else {
-      //     parsedDate = dayjs(vaqt).toDate();
-      //   }
-      // } catch (e) {
-      //   console.error('❌ Invalid date for row, skipping:', row, e);
-      //   continue; // vaqt parse bo‘lmasa row’ni o‘tkazamiz
-      // }
-
-      let parsedDate: Date;
-      try {
-        if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
-          // agar vaqt kiritilgan bo'lsa HH:mm:ss formatida parse qilamiz
-          if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
-            parsedDate = dayjs
-              .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
-              .toDate();
-          } else {
-            // vaqt bo'lmasa 00:00:01 qo'shamiz
-            parsedDate = dayjs
-              .tz(vaqt + ' 00:00:01', 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
-              .toDate();
-          }
-        } else {
-          parsedDate = dayjs(vaqt).toDate();
-        }
-      } catch (e) {
-        console.error('❌ Invalid date for row, skipping:', row, e);
         continue;
       }
 
+      const parsedDate = parseDateTz(vaqt);
+      if (!parsedDate) {
+        console.error('❌ Invalid date for row, skipping:', row);
+        continue;
+      }
 
       await this.prisma.userSheet.create({
         data: {
@@ -192,7 +181,6 @@ export class SheetsController {
         },
       });
     }
-
 
     return { message: 'Imported' };
   }
