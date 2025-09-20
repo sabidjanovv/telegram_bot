@@ -131,29 +131,27 @@ export class SheetsController {
         vaqt,
       ] = row;
 
-      if (!id) continue;
+      if (!id || !vaqt) {
+        console.warn('⏩ Skipping row due to missing id or vaqt:', row);
+        continue; // vaqt bo‘lmasa o‘tkazamiz
+      }
 
-      // Vaqtni parse qilish
-      let parsedDate: Date | null = null;
-      if (vaqt) {
-        try {
-          if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
-            if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
-              parsedDate = dayjs
-                .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
-                .toDate();
-            } else {
-              parsedDate = dayjs
-                .tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent')
-                .toDate();
-            }
+      let parsedDate: Date;
+      try {
+        if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
+          if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
+            parsedDate = dayjs
+              .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
+              .toDate();
           } else {
-            parsedDate = dayjs(vaqt).toDate();
+            parsedDate = dayjs.tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent').toDate();
           }
-        } catch (e) {
-          console.error('❌ Invalid date for row:', row, e);
-          parsedDate = null;
+        } else {
+          parsedDate = dayjs(vaqt).toDate();
         }
+      } catch (e) {
+        console.error('❌ Invalid date for row, skipping:', row, e);
+        continue; // vaqt parse bo‘lmasa row’ni o‘tkazamiz
       }
 
       await this.prisma.userSheet.create({
@@ -171,6 +169,7 @@ export class SheetsController {
         },
       });
     }
+
 
     return { message: 'Imported' };
   }
