@@ -155,28 +155,25 @@ export class SheetsController {
       // }
 
       let parsedDate: Date;
-
       try {
-        // agar vaqt DD.MM.YYYY formatida bo'lsa
         if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
+          // agar vaqt kiritilgan bo'lsa HH:mm:ss formatida parse qilamiz
           if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
-            // vaqt bilan
             parsedDate = dayjs
               .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
               .toDate();
           } else {
-            // faqat sana bo'lsa, default vaqt qo'shamiz
+            // vaqt bo'lmasa 00:00:01 qo'shamiz
             parsedDate = dayjs
               .tz(vaqt + ' 00:00:01', 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
               .toDate();
           }
         } else {
-          // boshqa format
-          parsedDate = dayjs(vaqt).tz('Asia/Tashkent').toDate();
+          parsedDate = dayjs(vaqt).toDate();
         }
       } catch (e) {
         console.error('❌ Invalid date for row, skipping:', row, e);
-        continue; // vaqt parse bo‘lmasa row’ni o‘tkazamiz
+        continue;
       }
 
 
