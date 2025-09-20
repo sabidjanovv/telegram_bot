@@ -95,12 +95,14 @@ export class SheetsController {
 
   // Utility function to parse "DD.MM.YYYY HH:mm:ss" into JS Date
   private parseDate(str: string): Date | null {
-    if (!str || str.trim() === '') return null; // bo'sh bo'lsa null qaytaradi
+    if (!str || str.trim() === '') return null; // bo'sh yoki undefined bo'lsa null
     try {
       const [datePart, timePart] = str.split(' ');
       if (!datePart || !timePart) return null;
+
       const [day, month, year] = datePart.split('.').map(Number);
       const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
       return new Date(year, month - 1, day, hours, minutes, seconds);
     } catch (e) {
       console.error('Invalid date format:', str);
@@ -111,24 +113,20 @@ export class SheetsController {
   @Get('import')
   async import() {
     try {
-      // Google Sheets ma'lumotlarini olish
-      const SHEET_ID = '1dMPJtbzOc-x6MU7DRdDoonj7rva3r9SQTMG7E0DIM8I';
-      const SHEET_RANGE = 'Лист1!A2:J10000';
-      const rows = await this.sheetsService.getValues(SHEET_ID, SHEET_RANGE);
+      const sheetId = '1dMPJtbzOc-x6MU7DRdDoonj7rva3r9SQTMG7E0DIM8I';
+      const range = 'Лист1!A2:J10000';
 
-      console.log('Total rows fetched:', rows.length);
+      const rows = await this.sheetsService.getValues(sheetId, range);
+
+      console.log(`Total rows fetched: ${rows.length}`);
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
 
-        // Konsolga har bir row ni chiqarish
-        console.log(`Row ${i + 1}:`, row);
+        // row[9] deb vaqt maydoni keladi
+        console.log(`Row ${i + 1} vaqt value:`, row[9]);
 
-        // row[9] deb vaqt maydoni kelyapti deb faraz qilamiz
         const vaqt = this.parseDate(row[9]);
-        if (!vaqt) {
-          console.warn(`Row ${i + 1} has invalid date: "${row[9]}"`);
-        }
 
         await this.prisma.userSheet.create({
           data: {
@@ -141,15 +139,16 @@ export class SheetsController {
             phone: row[6],
             kod: row[7] === 'true',
             status_alt: row[8] || null,
-            vaqt: vaqt || new Date(), // agar null bo‘lsa, hozirgi vaqt bilan saqlash
+            vaqt: vaqt || new Date(), // null bo'lsa hozirgi vaqt
           },
         });
       }
 
       return { success: true, message: 'Sheets imported successfully' };
     } catch (error) {
-      console.error('Import error:', error);
+      console.error(error);
       throw error;
     }
   }
 }
+
