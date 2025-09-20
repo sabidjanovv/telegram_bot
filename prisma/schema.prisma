@@ -1,0 +1,36 @@
+generator client {
+provider = "prisma-client-js"
+}
+
+
+datasource db {
+provider = "postgresql"
+url = env("DATABASE_URL")
+}
+
+
+model UserSheet {
+id Int @id @default(autoincrement())
+no String? // original № field (optional)
+chat_id String // telegram id as string
+karta_raqami Boolean
+amal_muddati Boolean
+status_code Int?
+status_msg String?
+phone String?
+kod Boolean
+status_alt String? // "Status(negadur 2ta...)" optional
+vaqt DateTime
+createdAt DateTime @default(now())
+}
+
+model TelegramUser {
+  id          Int      @id @default(autoincrement())
+  telegram_id BigInt   @unique
+  username    String?  
+  first_name  String?
+  last_name   String?
+  state       String?  // WAITING_FOR_DATE, WAITING_FOR_WEEK yoki null
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}

@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # Telegram bot app
+  app:
+    build: .
+    container_name: telegram_bot_app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    restart: always
+
+  # PostgreSQL database
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2005
+      POSTGRES_DB: hisobchiai
+    ports:
+      - "3001:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
