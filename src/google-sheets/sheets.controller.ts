@@ -108,7 +108,14 @@ export class SheetsController {
     console.log('📄 Using SHEET_RANGE:', range);
 
     const rows = await this.sheetsService.getValues(sheetId, range);
-    console.log(`📊 Total rows fetched: ${rows.length}`);
+
+    console.log('✅ Fetched', rows.length, 'rows from sheet');
+
+    const parseBool = (v: any) => {
+      if (v === undefined || v === null) return false;
+      const s = String(v).trim().toLowerCase();
+      return ['true', '1', 'yes', 'ha'].includes(s);
+    };
 
     for (const row of rows) {
       const [
@@ -124,65 +131,47 @@ export class SheetsController {
         vaqt,
       ] = row;
 
-      console.log('----------------------------------------');
-      console.log('Raw row:', row);
+      if (!id) continue;
 
-      if (!id || !vaqt) {
-        console.warn(`Skipping row because id or vaqt missing. row no=${no}`);
-        continue;
-      }
-
-      const parseBool = (v: any) => {
-        if (v === undefined || v === null) return false;
-        const s = String(v).trim().toLowerCase();
-        return ['true', '1', 'yes', 'ha'].includes(s);
-      };
-
-      let parsedDate: Date;
-
-      if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
-        if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
-          // Full date-time
-          parsedDate = dayjs
-            .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
-            .toDate();
-        } else {
-          // Only date, no time
-          parsedDate = dayjs.tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent').toDate();
+      // Vaqtni parse qilish
+      let parsedDate: Date | null = null;
+      if (vaqt) {
+        try {
+          if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
+            if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
+              parsedDate = dayjs
+                .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
+                .toDate();
+            } else {
+              parsedDate = dayjs
+                .tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent')
+                .toDate();
+            }
+          } else {
+            parsedDate = dayjs(vaqt).toDate();
+          }
+        } catch (e) {
+          console.error('❌ Invalid date for row:', row, e);
+          parsedDate = null;
         }
-      } else {
-        parsedDate = dayjs(vaqt).toDate(); // fallback
       }
 
-
-      if (!parsedDate) {
-        console.warn(`⚠️ Invalid date, skipping row no=${no}, id=${id}:`, vaqt);
-        continue;
-      }
-
-      const dataToInsert = {
-        no: no ? String(no) : null,
-        chat_id: String(id),
-        karta_raqami: parseBool(karta),
-        amal_muddati: parseBool(amal),
-        status_code: statusCode ? Number(statusCode) : null,
-        status_msg: statusMsg || null,
-        phone: phone || null,
-        kod: parseBool(kod),
-        status_alt: statusAlt || null,
-        vaqt: parsedDate,
-      };
-
-      console.log('Parsed data to insert:', dataToInsert);
-
-      try {
-        await this.prisma.userSheet.create({ data: dataToInsert });
-        console.log(`✅ Row inserted successfully: id=${id}`);
-      } catch (error) {
-        console.error(`❌ Error inserting row id=${id}:`, error);
-      }
+      await this.prisma.userSheet.create({
+        data: {
+          no: no ? String(no) : null,
+          chat_id: String(id),
+          karta_raqami: parseBool(karta),
+          amal_muddati: parseBool(amal),
+          status_code: statusCode ? Number(statusCode) : null,
+          status_msg: statusMsg || null,
+          phone: phone || null,
+          kod: parseBool(kod),
+          status_alt: statusAlt || null,
+          vaqt: parsedDate,
+        },
+      });
     }
 
-    return { message: 'Import finished' };
+    return { message: 'Imported' };
   }
 }
