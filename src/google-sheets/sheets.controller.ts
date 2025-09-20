@@ -136,23 +136,49 @@ export class SheetsController {
         continue; // vaqt bo‘lmasa o‘tkazamiz
       }
 
+      // let parsedDate: Date;
+      // try {
+      //   if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
+      //     if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
+      //       parsedDate = dayjs
+      //         .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
+      //         .toDate();
+      //     } else {
+      //       parsedDate = dayjs.tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent').toDate();
+      //     }
+      //   } else {
+      //     parsedDate = dayjs(vaqt).toDate();
+      //   }
+      // } catch (e) {
+      //   console.error('❌ Invalid date for row, skipping:', row, e);
+      //   continue; // vaqt parse bo‘lmasa row’ni o‘tkazamiz
+      // }
+
       let parsedDate: Date;
+
       try {
+        // agar vaqt DD.MM.YYYY formatida bo'lsa
         if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
           if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
+            // vaqt bilan
             parsedDate = dayjs
               .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
               .toDate();
           } else {
-            parsedDate = dayjs.tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent').toDate();
+            // faqat sana bo'lsa, default vaqt qo'shamiz
+            parsedDate = dayjs
+              .tz(vaqt + ' 00:00:01', 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
+              .toDate();
           }
         } else {
-          parsedDate = dayjs(vaqt).toDate();
+          // boshqa format
+          parsedDate = dayjs(vaqt).tz('Asia/Tashkent').toDate();
         }
       } catch (e) {
         console.error('❌ Invalid date for row, skipping:', row, e);
         continue; // vaqt parse bo‘lmasa row’ni o‘tkazamiz
       }
+
 
       await this.prisma.userSheet.create({
         data: {
