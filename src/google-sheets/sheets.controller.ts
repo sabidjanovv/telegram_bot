@@ -138,17 +138,22 @@ export class SheetsController {
         return ['true', '1', 'yes', 'ha'].includes(s);
       };
 
-      let parsedDate: Date | null = null;
-      if (vaqt && typeof vaqt === 'string' && vaqt.trim() !== '') {
-        // "DD.MM.YYYY HH:mm:ss" yoki "DD.MM.YYYY"
-        const tempDate = dayjs.tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent');
-        if (tempDate.isValid()) {
-          parsedDate = tempDate.toDate();
+      let parsedDate: Date;
+
+      if (/\d{2}\.\d{2}\.\d{4}/.test(vaqt)) {
+        if (/\d{2}:\d{2}:\d{2}/.test(vaqt)) {
+          // Full date-time
+          parsedDate = dayjs
+            .tz(vaqt, 'DD.MM.YYYY HH:mm:ss', 'Asia/Tashkent')
+            .toDate();
         } else {
-          const fallbackDate = dayjs.tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent');
-          parsedDate = fallbackDate.isValid() ? fallbackDate.toDate() : null;
+          // Only date, no time
+          parsedDate = dayjs.tz(vaqt, 'DD.MM.YYYY', 'Asia/Tashkent').toDate();
         }
+      } else {
+        parsedDate = dayjs(vaqt).toDate(); // fallback
       }
+
 
       if (!parsedDate) {
         console.warn(`⚠️ Invalid date, skipping row no=${no}, id=${id}:`, vaqt);
