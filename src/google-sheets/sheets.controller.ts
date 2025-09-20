@@ -123,7 +123,7 @@ export class SheetsController {
         vaqt,
       ] = row;
 
-      if (!id) continue; // vaqt bo'sh bo'lsa ham keyingi kod ishlaydi
+      if (!id) continue; // chat_id bo‘lmasa rowni o‘tkazamiz
 
       const parseBool = (v: any) => {
         if (v === undefined || v === null) return false;
@@ -131,36 +131,39 @@ export class SheetsController {
         return ['true', '1', 'yes', 'ha'].includes(s);
       };
 
-      // ✅ xavfsiz Date parsing
-      let parsedDate: Date | null = null;
-      if (vaqt) {
-        // "DD.MM.YYYY HH:mm:ss" formatini tekshirish
-        const d1 = dayjs(vaqt, 'DD.MM.YYYY HH:mm:ss', true);
-        const d2 = dayjs(vaqt, 'DD.MM.YYYY', true);
-        if (d1.isValid()) parsedDate = d1.tz('Asia/Tashkent').toDate();
-        else if (d2.isValid()) parsedDate = d2.tz('Asia/Tashkent').toDate();
-        else {
-          const d = dayjs(vaqt);
-          parsedDate = d.isValid() ? d.toDate() : null;
-        }
-      }
+      // ✅ Date parsing with fallback
+      const parsedDate: Date = vaqt
+        ? (() => {
+            const d1 = dayjs(vaqt, 'DD.MM.YYYY HH:mm:ss', true);
+            const d2 = dayjs(vaqt, 'DD.MM.YYYY', true);
+            if (d1.isValid()) return d1.tz('Asia/Tashkent').toDate();
+            if (d2.isValid()) return d2.tz('Asia/Tashkent').toDate();
+            const d = dayjs(vaqt);
+            return d.isValid() ? d.toDate() : new Date(); // invalid bo‘lsa hozirgi vaqt
+          })()
+        : new Date(); // vaqt bo‘lmasa hozirgi vaqt
 
-      await this.prisma.userSheet.create({
-        data: {
-          no: no ? String(no) : null,
-          chat_id: String(id),
-          karta_raqami: parseBool(karta),
-          amal_muddati: parseBool(amal),
-          status_code: statusCode ? Number(statusCode) : null,
-          status_msg: statusMsg || null,
-          phone: phone || null,
-          kod: parseBool(kod),
-          status_alt: statusAlt || null,
-          vaqt: parsedDate, // null bo'lsa xato bermaydi
-        },
-      });
+      try {
+        await this.prisma.userSheet.create({
+          data: {
+            no: no ? String(no) : null,
+            chat_id: String(id),
+            karta_raqami: parseBool(karta),
+            amal_muddati: parseBool(amal),
+            status_code: statusCode ? Number(statusCode) : null,
+            status_msg: statusMsg || null,
+            phone: phone || null,
+            kod: parseBool(kod),
+            status_alt: statusAlt || null,
+            vaqt: parsedDate, // har doim valid Date
+          },
+        });
+      } catch (err) {
+        console.error('Error saving row:', row, err);
+      }
     }
 
-    return { message: 'Imported safely' };
+    return { message: 'Imported successfully' };
   }
 }
+
