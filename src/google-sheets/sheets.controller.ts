@@ -123,7 +123,7 @@ export class SheetsController {
         vaqt,
       ] = row;
 
-      if (!id || !vaqt) continue;
+      if (!id) continue; // vaqt bo'sh bo'lsa ham keyingi kod ishlaydi
 
       const parseBool = (v: any) => {
         if (v === undefined || v === null) return false;
@@ -131,9 +131,10 @@ export class SheetsController {
         return ['true', '1', 'yes', 'ha'].includes(s);
       };
 
-      // ✅ Date parsing with fallback
+      // ✅ xavfsiz Date parsing
       let parsedDate: Date | null = null;
       if (vaqt) {
+        // "DD.MM.YYYY HH:mm:ss" formatini tekshirish
         const d1 = dayjs(vaqt, 'DD.MM.YYYY HH:mm:ss', true);
         const d2 = dayjs(vaqt, 'DD.MM.YYYY', true);
         if (d1.isValid()) parsedDate = d1.tz('Asia/Tashkent').toDate();
@@ -155,11 +156,11 @@ export class SheetsController {
           phone: phone || null,
           kod: parseBool(kod),
           status_alt: statusAlt || null,
-          vaqt: parsedDate, // null bo'lsa Prisma xato bermaydi
+          vaqt: parsedDate, // null bo'lsa xato bermaydi
         },
       });
     }
 
-    return { message: 'Imported' };
+    return { message: 'Imported safely' };
   }
 }
